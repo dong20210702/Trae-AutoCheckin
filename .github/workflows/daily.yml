@@ -2,7 +2,7 @@ name: Trae AutoCheckin Daily
 
 on:
   schedule:
-    - cron: '23 16 * * *'  # 北京时间 00:23（GitHub 定时任务可能有几分钟延迟）
+    - cron: '0 0 * * *'  # 北京时间 08:00（GitHub 定时任务可能有几分钟延迟，加上随机延时后约 08:00–08:30 开始）
   workflow_dispatch:
 
 concurrency:
