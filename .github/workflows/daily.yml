@@ -1,9 +1,14 @@
 name: Trae AutoCheckin Daily
 
 on:
-  schedule:
-    - cron: '0 0 * * *'  # 北京时间 08:00（GitHub 定时任务可能有几分钟延迟，加上随机延时后约 08:00–08:30 开始）
+  # 定时由外部调度器（如 cron-job.org）每天北京时间 08:00 调用本 workflow_dispatch 接口，
+  # 并传入 random_delay=true，从而在 0–29 分钟内随机开始。
   workflow_dispatch:
+    inputs:
+      random_delay:
+        description: '开始前随机延时 0–29 分钟（外部定时器调用时设为 true）'
+        type: boolean
+        default: false
 
 concurrency:
   group: trae-auto-checkin
@@ -19,8 +24,8 @@ jobs:
     env:
       TRAE_CACHE_KEY: ${{ secrets.TRAE_CACHE_KEY }}
     steps:
-      - name: Random delay (scheduled runs only)
-        if: ${{ github.event_name == 'schedule' }}
+      - name: Random delay (when random_delay=true)
+        if: ${{ inputs.random_delay }}
         run: |
           d=$((RANDOM % 1800))  # 0–1799 秒，即 30 分钟以内
           echo "随机延时 ${d} 秒后开始签到"
