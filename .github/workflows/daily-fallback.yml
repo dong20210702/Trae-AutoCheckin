@@ -1,0 +1,39 @@
+name: Trae AutoCheckin Fallback
+
+# 每天北京时间 14:00 检查：如果今天（北京时间）还没有运行过签到，就补跑一次。
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 北京时间 14:00
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  fallback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check whether today's check-in has run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 北京时间今天 00:00，换算成 UTC 时间用于比较
+          start=$(TZ=Asia/Shanghai date -d "today 00:00" -u +%Y-%m-%dT%H:%M:%SZ)
+          count=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow daily.yml --limit 50 \
+            --json createdAt --jq "[.[] | select(.createdAt >= \"$start\")] | length")
+          echo "自 $start（UTC）起，今天已有 $count 次运行"
+          if [ "$count" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_ENV"
+          else
+            echo "skip=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run check-in now if nothing ran today
+        if: ${{ env.skip == 'false' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "今天尚未运行，补跑签到"
+          gh workflow run daily.yml --repo "$GITHUB_REPOSITORY" --ref main
